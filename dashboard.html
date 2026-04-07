@@ -1,0 +1,836 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>RoseBot Dashboard</title>
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+:root{
+  --bg:#0d0d12;--bg2:#13131a;--bg3:#1a1a24;--bg4:#22222f;
+  --border:rgba(255,255,255,.07);--border2:rgba(255,255,255,.13);
+  --text:#dddde8;--muted:#666;--muted2:#999;
+  --accent:#9d7df0;--accent2:#7c3aed;--accent3:#5b21b6;
+  --green:#34d399;--red:#f87171;--yellow:#fbbf24;--blue:#60a5fa;
+  --r:10px;--rs:6px;
+}
+body{background:var(--bg);color:var(--text);font:14px/1.5 'Segoe UI',system-ui,sans-serif;min-height:100vh;overflow-x:hidden}
+.layout{display:grid;grid-template-columns:200px 1fr;min-height:100vh}
+
+/* Sidebar */
+aside{background:var(--bg2);border-right:1px solid var(--border);display:flex;flex-direction:column;position:sticky;top:0;height:100vh}
+.logo{padding:18px 16px 14px;border-bottom:1px solid var(--border);display:flex;align-items:center;gap:10px}
+.logo-icon{width:34px;height:34px;background:linear-gradient(135deg,var(--accent2),var(--accent));border-radius:9px;display:flex;align-items:center;justify-content:center;font-size:17px;flex-shrink:0}
+.logo-text{font-size:15px;font-weight:600}
+.logo-sub{font-size:10px;color:var(--muted);margin-top:1px}
+nav{flex:1;padding:10px 0;overflow-y:auto}
+.nav-item{display:flex;align-items:center;gap:9px;padding:9px 16px;cursor:pointer;color:var(--muted2);border-left:2px solid transparent;font-size:13px;transition:all .12s;user-select:none}
+.nav-item:hover{color:var(--text);background:rgba(255,255,255,.03)}
+.nav-item.active{color:var(--accent);border-left-color:var(--accent);background:rgba(157,125,240,.08)}
+.nav-icon{font-size:15px;width:18px;text-align:center;flex-shrink:0}
+.conn-pill{margin:12px;padding:10px 12px;background:var(--bg3);border-radius:var(--rs);border:1px solid var(--border)}
+.conn-row{display:flex;align-items:center;gap:7px}
+.dot{width:7px;height:7px;border-radius:50%;flex-shrink:0}
+.dot.online{background:var(--green);box-shadow:0 0 5px var(--green)}
+.dot.offline{background:var(--red)}
+.dot.connecting{background:var(--yellow);animation:blink 1s infinite}
+@keyframes blink{0%,100%{opacity:1}50%{opacity:.3}}
+.conn-label{font-size:12px;font-weight:500}
+.conn-sub{font-size:10px;color:var(--muted);margin-top:2px}
+
+/* Main */
+main{padding:24px 28px;overflow-y:auto;min-width:0}
+.page{display:none}
+.page.active{display:block}
+.ph{margin-bottom:20px}
+.ph h1{font-size:20px;font-weight:600}
+.ph p{color:var(--muted2);font-size:13px;margin-top:3px}
+
+/* Stat grid */
+.stat-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(130px,1fr));gap:10px;margin-bottom:18px}
+.stat-card{background:var(--bg3);border:1px solid var(--border);border-radius:var(--rs);padding:14px}
+.stat-label{font-size:10px;color:var(--muted2);text-transform:uppercase;letter-spacing:.05em}
+.stat-value{font-size:26px;font-weight:600;margin-top:3px;color:var(--text)}
+.stat-sub{font-size:11px;color:var(--muted);margin-top:1px}
+
+/* Cards */
+.card{background:var(--bg2);border:1px solid var(--border);border-radius:var(--r);padding:16px 18px;margin-bottom:14px}
+.card-title{font-size:11px;font-weight:600;color:var(--accent);text-transform:uppercase;letter-spacing:.06em;margin-bottom:12px;display:flex;align-items:center;gap:7px}
+.two-col{display:grid;grid-template-columns:1fr 1fr;gap:14px}
+
+/* Tables */
+table{width:100%;border-collapse:collapse}
+th{text-align:left;font-size:10px;color:var(--muted2);text-transform:uppercase;letter-spacing:.04em;padding:5px 8px;border-bottom:1px solid var(--border)}
+td{padding:7px 8px;border-bottom:1px solid var(--border);font-size:13px}
+tr:last-child td{border-bottom:none}
+.mono{font-family:monospace;font-size:12px;color:var(--muted2)}
+.tag{display:inline-block;background:rgba(157,125,240,.14);color:var(--accent);border-radius:4px;padding:1px 7px;font-family:monospace;font-size:12px}
+.badge{display:inline-block;padding:1px 7px;border-radius:10px;font-size:11px;font-weight:500}
+.badge-g{background:rgba(52,211,153,.13);color:var(--green)}
+.badge-r{background:rgba(248,113,113,.13);color:var(--red)}
+.badge-y{background:rgba(251,191,36,.13);color:var(--yellow)}
+.badge-b{background:rgba(96,165,250,.13);color:var(--blue)}
+
+/* Log */
+.log-box{background:#08080d;border:1px solid var(--border);border-radius:var(--rs);padding:12px;font-family:monospace;font-size:12px;height:320px;overflow-y:auto;color:#777}
+.log-line{line-height:1.8;white-space:pre-wrap;word-break:break-all}
+.log-INFO{color:#93c5fd}.log-WARN{color:var(--yellow)}.log-ERROR{color:var(--red)}.log-OK,.log-DEBUG{color:var(--green)}
+
+/* Forms */
+.form-group{margin-bottom:12px}
+.form-row{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+label{display:block;font-size:11px;color:var(--muted2);margin-bottom:4px;font-weight:500}
+input,select,textarea{width:100%;background:var(--bg3);border:1px solid var(--border2);border-radius:var(--rs);color:var(--text);font-size:13px;padding:7px 11px;outline:none;font-family:inherit;transition:border .12s}
+input:focus,select:focus,textarea:focus{border-color:var(--accent)}
+input[type=password]{font-family:monospace;letter-spacing:.08em}
+textarea{resize:vertical;min-height:60px}
+.hint{font-size:10px;color:var(--muted);margin-top:3px}
+
+/* Buttons */
+.btn{display:inline-flex;align-items:center;gap:6px;padding:7px 14px;border-radius:var(--rs);font-size:13px;font-weight:500;cursor:pointer;border:none;font-family:inherit;transition:all .12s}
+.btn-primary{background:var(--accent2);color:#fff}.btn-primary:hover{background:var(--accent3)}
+.btn-success{background:rgba(52,211,153,.12);color:var(--green);border:1px solid rgba(52,211,153,.2)}.btn-success:hover{background:rgba(52,211,153,.2)}
+.btn-danger{background:rgba(248,113,113,.12);color:var(--red);border:1px solid rgba(248,113,113,.2)}.btn-danger:hover{background:rgba(248,113,113,.2)}
+.btn-ghost{background:transparent;color:var(--muted2);border:1px solid var(--border2)}.btn-ghost:hover{color:var(--text);background:rgba(255,255,255,.04)}
+.btn-row{display:flex;gap:8px;margin-top:14px;flex-wrap:wrap}
+
+/* Toggle */
+.tog-row{display:flex;justify-content:space-between;align-items:center;padding:9px 0;border-bottom:1px solid var(--border)}
+.tog-row:last-child{border-bottom:none}
+.tog-name{font-size:13px;font-weight:500}
+.tog-desc{font-size:11px;color:var(--muted);margin-top:1px}
+.toggle{position:relative;width:36px;height:19px;flex-shrink:0}
+.toggle input{opacity:0;width:0;height:0}
+.slider{position:absolute;inset:0;background:var(--bg4);border:1px solid var(--border2);border-radius:19px;cursor:pointer;transition:.18s}
+.slider::before{content:'';position:absolute;width:13px;height:13px;left:2px;top:2px;background:var(--muted);border-radius:50%;transition:.18s}
+.toggle input:checked+.slider{background:var(--accent2);border-color:var(--accent2)}
+.toggle input:checked+.slider::before{transform:translateX(17px);background:#fff}
+
+/* Rooms list */
+.room-item{display:flex;align-items:center;gap:10px;padding:8px 0;border-bottom:1px solid var(--border)}
+.room-item:last-child{border-bottom:none}
+.room-icon{width:32px;height:32px;border-radius:8px;background:var(--bg4);display:flex;align-items:center;justify-content:center;font-size:14px;flex-shrink:0}
+.room-name{font-size:13px;font-weight:500;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:200px}
+.room-sub{font-size:11px;color:var(--muted)}
+.room-badges{margin-left:auto;display:flex;gap:5px;flex-shrink:0}
+
+/* Config table */
+.cfg-row{display:flex;align-items:center;gap:12px;padding:9px 0;border-bottom:1px solid var(--border)}
+.cfg-row:last-child{border-bottom:none}
+.cfg-key{font-family:monospace;font-size:12px;color:var(--accent);width:160px;flex-shrink:0}
+.cfg-val{flex:1;font-size:13px}
+.cfg-desc{font-size:11px;color:var(--muted);margin-top:1px}
+.cfg-input{flex:1}
+
+/* Notif */
+.notif{position:fixed;bottom:20px;right:20px;background:var(--bg2);border:1px solid var(--border2);border-radius:var(--rs);padding:10px 16px;font-size:13px;z-index:999;transition:opacity .25s;box-shadow:0 8px 32px rgba(0,0,0,.6)}
+.notif.hide{opacity:0;pointer-events:none}
+
+.login-overlay{position:fixed;inset:0;background:rgba(13,13,18,.92);backdrop-filter:blur(4px);display:flex;align-items:center;justify-content:center;z-index:1000;opacity:1;transition:opacity .25s;pointer-events:auto}
+.login-overlay.hide{opacity:0;pointer-events:none}
+.login-card{background:var(--bg2);border:1px solid var(--border);border-radius:16px;padding:28px;max-width:360px;width:100%;text-align:center}
+.login-card h2{margin-bottom:14px;font-size:20px}
+.login-card p{color:var(--muted2);margin-bottom:18px;font-size:13px}
+.login-card input{width:100%;margin-bottom:12px}
+.login-card .btn{width:100%;justify-content:center}
+.login-error{color:var(--red);font-size:13px;margin-bottom:12px;min-height:18px}
+
+/* Scrollbar */
+::-webkit-scrollbar{width:5px;height:5px}
+::-webkit-scrollbar-track{background:transparent}
+::-webkit-scrollbar-thumb{background:var(--bg4);border-radius:3px}
+
+/* Bar chart */
+.bar-wrap{display:flex;align-items:center;gap:8px;margin:3px 0}
+.bar-label{font-size:12px;color:var(--muted2);width:110px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;flex-shrink:0}
+.bar-track{flex:1;height:8px;background:var(--bg4);border-radius:4px;overflow:hidden}
+.bar-fill{height:100%;background:linear-gradient(90deg,var(--accent2),var(--accent));border-radius:4px;transition:width .4s}
+.bar-count{font-size:11px;color:var(--muted2);width:36px;text-align:right;flex-shrink:0}
+</style>
+</head>
+<body>
+<div class="layout">
+
+<!-- ─── Sidebar ─────────────────────────────────────────────── -->
+<aside>
+  <div class="logo">
+    <div class="logo-icon">🌹</div>
+    <div>
+      <div class="logo-text">RoseBot</div>
+      <div class="logo-sub">v2.0.0</div>
+    </div>
+  </div>
+  <nav>
+    <div class="nav-item active" data-page="dashboard"><span class="nav-icon">📊</span>Dashboard</div>
+    <div class="nav-item" data-page="logs"><span class="nav-icon">📜</span>Live Logs</div>
+    <div class="nav-item" data-page="rooms"><span class="nav-icon">🏠</span>Rooms</div>
+    <div class="nav-item" data-page="config"><span class="nav-icon">⚙️</span>Bot Config</div>
+    <div class="nav-item" data-page="credentials"><span class="nav-icon">🔐</span>Credentials</div>
+    <div class="nav-item" data-page="commands"><span class="nav-icon">📋</span>Commands</div>
+    <div class="nav-item" data-page="features"><span class="nav-icon">🔧</span>Features</div>
+    <div class="nav-item" data-page="users"><span class="nav-icon">👥</span>Users</div>
+  </nav>
+  <div class="conn-pill">
+    <div class="conn-row"><div class="dot connecting" id="wsDot"></div><span class="conn-label" id="wsLabel">Connecting…</span></div>
+    <div class="conn-sub" id="wsSub">ws://127.0.0.1:7842/ws</div>
+  </div>
+</aside>
+
+<!-- ─── Main ───────────────────────────────────────────────── -->
+<main>
+
+<!-- Dashboard -->
+<div class="page active" id="page-dashboard">
+  <div class="ph"><h1>Dashboard</h1><p>Live stats from your running bot</p></div>
+  <div class="stat-grid">
+    <div class="stat-card"><div class="stat-label">Rooms</div><div class="stat-value" id="sRooms">—</div><div class="stat-sub">active</div></div>
+    <div class="stat-card"><div class="stat-label">Users</div><div class="stat-value" id="sUsers">—</div><div class="stat-sub">tracked</div></div>
+    <div class="stat-card"><div class="stat-label">Commands</div><div class="stat-value" id="sCmds">—</div><div class="stat-sub">total run</div></div>
+    <div class="stat-card"><div class="stat-label">Economy</div><div class="stat-value" id="sCoins">—</div><div class="stat-sub">coins total</div></div>
+  </div>
+  <div class="two-col">
+    <div class="card">
+      <div class="card-title">👑 Rich List</div>
+      <div id="richList"><div style="color:var(--muted);font-size:13px">Waiting for bot…</div></div>
+    </div>
+    <div class="card">
+      <div class="card-title">🏆 Top Users</div>
+      <div id="topUsers"><div style="color:var(--muted);font-size:13px">Waiting for bot…</div></div>
+    </div>
+  </div>
+  <div class="card">
+    <div class="card-title">🔥 Command Usage</div>
+    <div id="cmdBars"><div style="color:var(--muted);font-size:13px">Waiting for bot…</div></div>
+  </div>
+  <div class="card">
+    <div class="card-title">⚡ Quick Actions</div>
+    <div class="btn-row">
+      <button class="btn btn-success" onclick="notify('▶ Run: python bot.py in your terminal','success')">▶ Start Bot</button>
+      <button class="btn btn-danger"  onclick="notify('⏹ Stop the terminal running bot.py','info')">⏹ Stop Bot</button>
+      <button class="btn btn-ghost"   onclick="wsConnect()">🔄 Reconnect WS</button>
+    </div>
+  </div>
+</div>
+
+<!-- Live Logs -->
+<div class="page" id="page-logs">
+  <div class="ph"><h1>Live Logs</h1><p>Real-time log stream via WebSocket</p></div>
+  <div class="card">
+    <div class="card-title">
+      📜 Bot Log
+      <span id="logCount" style="margin-left:auto;font-size:11px;color:var(--muted);font-weight:400;text-transform:none;letter-spacing:0">0 lines</span>
+    </div>
+    <div class="log-box" id="logBox"></div>
+    <div class="btn-row">
+      <button class="btn btn-ghost" onclick="clearLogs()">🗑 Clear</button>
+      <label style="display:flex;align-items:center;gap:6px;cursor:pointer;margin-left:auto;font-size:12px;color:var(--muted2)">
+        <input type="checkbox" id="autoScroll" checked style="width:14px"> Auto-scroll
+      </label>
+    </div>
+  </div>
+</div>
+
+<!-- Rooms -->
+<div class="page" id="page-rooms">
+  <div class="ph"><h1>Rooms</h1><p>All rooms the bot is in</p></div>
+  <div class="card">
+    <div class="card-title">🏠 Room List <span id="roomCountBadge" style="margin-left:auto;font-size:11px;color:var(--muted);font-weight:400;text-transform:none;letter-spacing:0">—</span></div>
+    <div id="roomList"><div style="color:var(--muted);font-size:13px">Waiting for bot…</div></div>
+  </div>
+</div>
+
+<!-- Bot Config (live DB settings) -->
+<div class="page" id="page-config">
+  <div class="ph"><h1>Bot Config</h1><p>These are read from the database live — use <span class="tag">!config key value</span> in Matrix, or edit here</p></div>
+  <div class="card">
+    <div class="card-title">⚙️ Settings</div>
+    <div id="cfgRows"></div>
+    <div class="btn-row">
+      <button class="btn btn-ghost" onclick="refreshConfig()">↺ Refresh</button>
+    </div>
+  </div>
+</div>
+
+<!-- Credentials -->
+<div class="page" id="page-credentials">
+  <div class="ph"><h1>Credentials</h1><p>Edit your .env file — save generates the file content to clipboard</p></div>
+  <div class="card">
+    <div class="card-title">🔐 Matrix Credentials</div>
+    <div class="form-row">
+      <div class="form-group"><label>Homeserver URL</label><input id="cHS" value="http://private.animebd.xyz"></div>
+      <div class="form-group"><label>Bot User ID</label><input id="cUser" value="@rose:private.animebd.xyz"></div>
+    </div>
+    <div class="form-row">
+      <div class="form-group"><label>Device ID</label><input id="cDID" value="QJGKROJMCU"></div>
+      <div class="form-group"><label>Device Name</label><input id="cDN" value="RoseBot"></div>
+    </div>
+    <div class="form-group"><label>Access Token</label><input type="password" id="cTok" value="syt_cm9zZQ_mWvGCwnrwcXZXGnuBkOL_1kpCQE"><div class="hint">⚠️ Never share this</div></div>
+    <div class="form-group"><label>Megolm Passphrase</label><input type="password" id="cMeg" value="EsUE Zr1d GqLa upLM EETi DWRH gvv7 WcZo wRNA YGNL Xf61 k889"></div>
+    <div class="form-group"><label>Admin MXIDs (comma-separated)</label><input id="cAdm" placeholder="@you:server,@mod:server"></div>
+    <div class="btn-row">
+      <button class="btn btn-primary" onclick="saveCreds()">📋 Copy .env to clipboard</button>
+    </div>
+  </div>
+</div>
+
+<!-- Commands reference -->
+<div class="page" id="page-commands">
+  <div class="ph"><h1>Commands</h1><p>Full reference — prefix configurable via !config command_prefix</p></div>
+  <div id="cmdRef"></div>
+</div>
+
+<!-- Feature toggles -->
+<div class="page" id="page-features">
+  <div class="ph"><h1>Features</h1><p>Enable / disable command categories (saved locally)</p></div>
+  <div class="card"><div class="card-title">🔧 Toggles</div><div id="featList"></div><div class="btn-row"><button class="btn btn-primary" onclick="saveFeatures()">💾 Save</button></div></div>
+</div>
+
+<!-- Users -->
+<div class="page" id="page-users">
+  <div class="ph"><h1>Users</h1><p>Manage users and bans across rooms</p></div>
+  <div class="card">
+    <div class="card-title">👥 User List</div>
+    <div class="form-group">
+      <label>Room Filter</label>
+      <select id="userRoomFilter" onchange="loadUsers()">
+        <option value="">All Rooms</option>
+      </select>
+    </div>
+    <table id="userTable">
+      <thead><tr><th>User</th><th>Display Name</th><th>Commands</th><th>Coins</th><th>Actions</th></tr></thead>
+      <tbody id="userTableBody"></tbody>
+    </table>
+  </div>
+</div>
+
+</main>
+</div>
+<div class="login-overlay hide" id="loginOverlay">
+  <div class="login-card">
+    <h2>RoseBot Dashboard</h2>
+    <p>Enter the dashboard password to continue.</p>
+    <div class="login-error" id="loginError"></div>
+    <input id="loginPassword" type="password" placeholder="Dashboard password">
+    <button class="btn btn-primary" onclick="loginSubmit()">Unlock</button>
+  </div>
+</div>
+<div class="notif hide" id="notif"></div>
+
+<script>
+// ─── Navigation ───────────────────────────────────────────────────
+document.querySelectorAll('.nav-item').forEach(el => {
+  el.addEventListener('click', () => {
+    document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
+    document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
+    el.classList.add('active');
+    document.getElementById('page-' + el.dataset.page).classList.add('active');
+  });
+});
+
+// ─── Notification ─────────────────────────────────────────────────
+function notify(msg, type = 'info') {
+  const el = document.getElementById('notif');
+  el.textContent = msg;
+  el.className = 'notif';
+  const colors = {success: 'var(--green)', error: 'var(--red)', info: 'var(--border2)'};
+  el.style.borderColor = colors[type] || colors.info;
+  clearTimeout(el._t);
+  el._t = setTimeout(() => el.classList.add('hide'), 3000);
+}
+
+// ─── WebSocket connection ─────────────────────────────────────────
+let ws = null;
+let wsRetryTimer = null;
+let logLineCount = 0;
+
+function wsConnect() {
+  if (ws) { try { ws.close() } catch(e){} }
+  clearTimeout(wsRetryTimer);
+  setWsStatus('connecting');
+
+  const protocol = window.location.protocol === 'https:' ? 'wss' : 'ws';
+  ws = new WebSocket(`${protocol}://${window.location.host}/ws`);
+
+  ws.onopen = () => {
+    setWsStatus('online');
+    ws.send(JSON.stringify({ type: 'get_stats' }));
+    ws.send(JSON.stringify({ type: 'get_rooms' }));
+    addLog('OK', 'Connected to RoseBot WebSocket server.');
+  };
+
+  ws.onmessage = e => {
+    try {
+      const msg = JSON.parse(e.data);
+      if (msg.type === 'log')   handleLog(msg);
+      if (msg.type === 'stats') handleStats(msg.data);
+      if (msg.type === 'rooms') handleRooms(msg.data);
+      if (msg.type === 'pong')  addLog('OK', 'Pong received.');
+    } catch(ex) {}
+  };
+
+  ws.onerror = () => setWsStatus('offline');
+
+  ws.onclose = () => {
+    setWsStatus('offline');
+    addLog('WARN', 'WebSocket disconnected. Retrying in 5s…');
+    wsRetryTimer = setTimeout(wsConnect, 5000);
+  };
+}
+
+function setWsStatus(state) {
+  const dot   = document.getElementById('wsDot');
+  const label = document.getElementById('wsLabel');
+  dot.className = 'dot ' + state;
+  label.textContent = { online: 'Connected', offline: 'Disconnected', connecting: 'Connecting…' }[state] || state;
+}
+
+// ─── Stats handler ────────────────────────────────────────────────
+function handleStats(d) {
+  document.getElementById('sRooms').textContent = d.rooms ?? '—';
+  document.getElementById('sUsers').textContent = (d.user_count ?? 0).toLocaleString();
+  document.getElementById('sCmds').textContent  = (d.cmd_count  ?? 0).toLocaleString();
+  document.getElementById('sCoins').textContent = (d.coins      ?? 0).toLocaleString();
+
+  // Rich list
+  const rich = d.rich || [];
+  if (rich.length) {
+    const medals = ['🥇','🥈','🥉'];
+    document.getElementById('richList').innerHTML = rich.map((r,i) => `
+      <div style="display:flex;align-items:center;gap:8px;padding:5px 0;border-bottom:1px solid var(--border)">
+        <span style="font-size:15px;width:22px">${medals[i] || (i+1)+'.'}</span>
+        <span style="flex:1;font-size:13px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${esc(r.display_name||r.mxid)}</span>
+        <span style="font-size:12px;color:var(--yellow)">${r.balance.toLocaleString()} 🪙</span>
+      </div>
+    `).join('');
+  }
+
+  // Top users
+  const tu = d.top_users || [];
+  if (tu.length) {
+    document.getElementById('topUsers').innerHTML = tu.map((r,i) => `
+      <div style="display:flex;align-items:center;gap:8px;padding:5px 0;border-bottom:1px solid var(--border)">
+        <span style="font-size:11px;color:var(--muted);width:16px">${i+1}</span>
+        <span style="flex:1;font-size:13px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${esc(r.display_name||r.mxid)}</span>
+        <span style="font-size:12px;color:var(--muted2)">${r.message_count.toLocaleString()} msgs</span>
+      </div>
+    `).join('');
+  }
+
+  // Command bars
+  const cmds = d.top_cmds || [];
+  if (cmds.length) {
+    const maxV = Math.max(...cmds.map(c=>c.total), 1);
+    document.getElementById('cmdBars').innerHTML = cmds.map(c => `
+      <div class="bar-wrap">
+        <span class="bar-label">!${esc(c.command)}</span>
+        <div class="bar-track"><div class="bar-fill" style="width:${Math.round(c.total/maxV*100)}%"></div></div>
+        <span class="bar-count">${c.total}</span>
+      </div>
+    `).join('');
+  }
+}
+
+// ─── Rooms handler ────────────────────────────────────────────────
+function handleRooms(rooms) {
+  document.getElementById('roomCountBadge').textContent = `${rooms.length} rooms`;
+  if (!rooms.length) {
+    document.getElementById('roomList').innerHTML = '<div style="color:var(--muted);font-size:13px">No rooms yet.</div>';
+    return;
+  }
+  document.getElementById('roomList').innerHTML = rooms.map(r => `
+    <div class="room-item">
+      <div class="room-icon">${r.encrypted ? '🔒' : '💬'}</div>
+      <div>
+        <div class="room-name">${esc(r.name)}</div>
+        <div class="room-sub mono">${esc(r.room_id)}</div>
+      </div>
+      <div class="room-badges">
+        ${r.encrypted ? '<span class="badge badge-g">E2EE</span>' : ''}
+        <span class="badge badge-b">${r.member_count} members</span>
+      </div>
+    </div>
+  `).join('');
+}
+
+// ─── Log handler ──────────────────────────────────────────────────
+function handleLog(msg) {
+  addLog(msg.level, msg.msg);
+}
+
+function addLog(level, text) {
+  const box = document.getElementById('logBox');
+  const line = document.createElement('div');
+  line.className = 'log-line log-' + level;
+  const now = new Date().toTimeString().slice(0,8);
+  line.textContent = `${now} [${level.padEnd(5)}] ${text}`;
+  box.appendChild(line);
+  logLineCount++;
+  document.getElementById('logCount').textContent = logLineCount + ' lines';
+  // cap at 500 lines
+  while (box.children.length > 500) box.removeChild(box.firstChild);
+  if (document.getElementById('autoScroll').checked) {
+    box.scrollTop = box.scrollHeight;
+  }
+}
+
+function clearLogs() {
+  document.getElementById('logBox').innerHTML = '';
+  logLineCount = 0;
+  document.getElementById('logCount').textContent = '0 lines';
+}
+
+// ─── Config page ──────────────────────────────────────────────────
+const CONFIG_META = {
+  command_prefix:   ['Command prefix',         '1 char, e.g. !'],
+  daily_reward:     ['Daily coin reward',       'number'],
+  bank_starting:    ['New user starting coins', 'number'],
+  crash_max_bet:    ['Max crash bet',           'number'],
+  mention_required: ['Require @mention to respond', 'true / false'],
+  cleanup_temp_messages: ['Auto-clean temporary status messages', 'true / false'],
+  welcome_message:  ['Room join message',       'text or empty'],
+  banned_words:     ['Ignored words (csv)',     'word1,word2'],
+  max_download_mb:  ['Max download size (MB)',  'number'],
+};
+const DEFAULT_CFG = {command_prefix:'!',daily_reward:'500',bank_starting:'1000',crash_max_bet:'10000',mention_required:'false',cleanup_temp_messages:'true',welcome_message:'',banned_words:'',max_download_mb:'50'};
+
+function renderConfig(data) {
+  const cfg = data || SERVER_CONFIG || DEFAULT_CFG;
+  const rows = Object.entries(CONFIG_META).map(([key,[desc,hint]]) => {
+    const val = cfg[key] ?? DEFAULT_CFG[key] ?? '';
+    return `
+      <div class="cfg-row">
+        <span class="cfg-key">${key}</span>
+        <div class="cfg-input">
+          <div style="font-size:12px;color:var(--muted2);margin-bottom:3px">${desc} <span style="color:var(--muted)">(${hint})</span></div>
+          <input data-cfgkey="${key}" value="${esc(val)}" style="font-family:monospace;font-size:12px">
+        </div>
+      </div>
+    `;
+  });
+  document.getElementById('cfgRows').innerHTML = rows.join('');
+}
+
+function refreshConfig() {
+  // In a real deployment you'd fetch /api/config
+  // For now, show defaults and instruct user
+  renderConfig(DEFAULT_CFG);
+  notify('Config shows defaults — use !config in Matrix to see live values', 'info');
+}
+
+// ─── Credentials ──────────────────────────────────────────────────
+function saveCreds() {
+  const env = [
+    `MATRIX_HOMESERVER=${document.getElementById('cHS').value}`,
+    `MATRIX_USER=${document.getElementById('cUser').value}`,
+    `MATRIX_DEVICE_ID=${document.getElementById('cDID').value}`,
+    `MATRIX_DEVICE_NAME=${document.getElementById('cDN').value}`,
+    `MATRIX_TOKEN=${document.getElementById('cTok').value}`,
+    `MATRIX_MEGOLM_PASSPHRASE=${document.getElementById('cMeg').value}`,
+    `BOT_ADMINS=${document.getElementById('cAdm').value}`,
+    `COMMAND_PREFIX=!`,
+    `DAILY_REWARD=500`,
+    `BANK_STARTING_BALANCE=1000`,
+    `CRASH_MAX_BET=10000`,
+  ].join('\n');
+  navigator.clipboard.writeText(env).then(
+    () => notify('✅ .env content copied to clipboard — paste into your .env file', 'success'),
+    () => notify('❌ Clipboard blocked — copy manually', 'error')
+  );
+}
+
+// ─── Commands reference ───────────────────────────────────────────
+const CMD_SECTIONS = [
+  ['📺 AniList', [
+    ['!anime <title|id>','Anime info + cover image'],
+    ['!manga <title|id>','Manga info + cover'],
+    ['!character <name|id>','Character info + image'],
+    ['!airing <title|id>','Airing schedule'],
+    ['!top [genre]','Top 10 rated anime'],
+    ['!studio <name>','Studio info + works'],
+    ['!mal <title>','MyAnimeList search via Jikan'],
+  ]],
+  ['🎨 Image Gen', [
+    ['!imagine <prompt>','AI image via Pollinations.ai (free)'],
+  ]],
+  ['📥 Media Downloads', [
+    ['!ytdl <url>','YouTube video → upload to room'],
+    ['!mp3 <url>','YouTube audio → MP3'],
+    ['!igdl <url>','Instagram video/image'],
+    ['!fbdl <url>','Facebook video'],
+    ['!xdl <url>','X/Twitter video'],
+    ['!pixiv <url|id>','Pixiv artwork via pixiv.cat'],
+  ]],
+  ['💰 Economy & Games', [
+    ['!bank','Your balance + game stats'],
+    ['!bank add <@user> <amt>','(Admin) Add coins to another user'],
+    ['!daily','Claim daily coins (24h cooldown)'],
+    ['!loan <amt>','Take a loan (max 10,000)'],
+    ['!crash <bet> <mult>','Crash gambling game'],
+    ['!give <@user> <amt>','Transfer coins'],
+    ['!richlist','Top 10 balances'],
+    ['!gamestats','Your crash game history'],
+  ]],
+  ['⏰ Reminders', [
+    ['!remind <time> <msg>','Set a reminder (e.g. 1h30m, 2d)'],
+    ['!reminders','List your pending reminders'],
+    ['!cancelremind <id>','Cancel a reminder by ID'],
+  ]],
+  ['📊 Polls', [
+    ['!poll Q | A | B | C','Create a poll (| separated options)'],
+    ['!vote [id] <n>','Vote — number only uses active poll'],
+    ['!pollresults [id]','Show results with bar chart'],
+    ['!endpoll [id]','Close poll (creator or admin)'],
+  ]],
+  ['🔧 Utilities', [
+    ['!ping','Bot latency check'],
+    ['!weather <city>','Current weather'],
+    ['!translate <lang> <text>','Translate text (MyMemory)'],
+    ['!urban <term>','Urban Dictionary'],
+    ['!yts <query>','YouTube search (top 5)'],
+    ['!whoami','Your profile + command history'],
+    ['!id <@user>','Look up a tracked user'],
+    ['!stats','Global bot usage stats'],
+    ['!rank','Room message leaderboard'],
+    ['!clear <duration>','Delete recent bot text messages (e.g. 5m, 1h)'],
+  ]],
+  ['🛡 Admin', [
+    ['!kick <@user> [reason]','Kick user from room'],
+    ['!ban <@user> [reason]','Ban user from room'],
+    ['!unban <@user>','Unban user'],
+    ['!banlist','List all room bans'],
+    ['!config [key] [val]','View/set bot configuration'],
+  ]],
+];
+
+document.getElementById('cmdRef').innerHTML = CMD_SECTIONS.map(([title, cmds]) => `
+  <div class="card">
+    <div class="card-title">${title}</div>
+    <table>
+      <tr><th>Command</th><th>Description</th></tr>
+      ${cmds.map(([cmd,desc]) => `<tr><td><span class="tag">${cmd}</span></td><td style="color:var(--muted2);font-size:13px">${desc}</td></tr>`).join('')}
+    </table>
+  </div>
+`).join('');
+
+// ─── Feature toggles ──────────────────────────────────────────────
+const FEATURES = [
+  {key:'anilist',   name:'AniList + MAL',      desc:'!anime !manga !character !airing !top !studio !mal', def:true},
+  {key:'imagegen',  name:'Image Generation',   desc:'!imagine via Pollinations.ai', def:true},
+  {key:'media',     name:'Media Downloads',    desc:'!ytdl !mp3 !igdl !fbdl !xdl !pixiv', def:true},
+  {key:'cleanup_temp_messages', name:'Temp status cleanup', desc:'Auto-delete temporary status messages after 30 seconds', def:true},
+  {key:'economy',   name:'Economy & Games',    desc:'!bank !daily !crash !give !richlist !gamestats', def:true},
+  {key:'reminders', name:'Reminders',          desc:'!remind !reminders !cancelremind (background loop)', def:true},
+  {key:'polls',     name:'Polls',              desc:'!poll !vote !pollresults !endpoll', def:true},
+  {key:'utils',     name:'Utilities',          desc:'!ping !weather !translate !urban !yts', def:true},
+  {key:'userinfo',  name:'User Info',          desc:'!whoami !id !stats !rank', def:true},
+  {key:'admin',     name:'Admin Commands',     desc:'!kick !ban !unban !banlist !config', def:true},
+  {key:'e2ee',      name:'E2EE',               desc:'End-to-end encryption support', def:true},
+  {key:'autojoin',  name:'Auto-join Invites',  desc:'Join rooms when invited', def:true},
+  {key:'banned_words_filter', name:'Banned Words Filter', desc:'Ignore messages with configured bad words', def:false},
+];
+
+const FEAT_KEY = 'rosebot_v2_features';
+let SERVER_CONFIG = {};
+function renderFeatures() {
+  const saved = JSON.parse(localStorage.getItem(FEAT_KEY)||'{}');
+  document.getElementById('featList').innerHTML = FEATURES.map(f => {
+    let checked = (f.key in saved ? saved[f.key] : f.def);
+    if (f.key === 'cleanup_temp_messages' && SERVER_CONFIG[f.key] !== undefined) {
+      checked = SERVER_CONFIG[f.key] === 'true' || SERVER_CONFIG[f.key] === true;
+    }
+    return `
+      <div class="tog-row">
+        <div><div class="tog-name">${f.name}</div><div class="tog-desc">${f.desc}</div></div>
+        <label class="toggle"><input type="checkbox" id="f_${f.key}" ${checked?'checked':''}><span class="slider"></span></label>
+      </div>
+    `;
+  }).join('');
+}
+async function saveFeatures() {
+  const out = {};
+  let serverSaved = false;
+  for (const f of FEATURES) {
+    const checked = document.getElementById('f_'+f.key).checked;
+    out[f.key] = checked;
+    if (f.key === 'cleanup_temp_messages') {
+      try {
+        const resp = await fetch('/api/config', {
+          method: 'POST',
+          credentials: 'same-origin',
+          headers: {'Content-Type': 'application/json'},
+          body: JSON.stringify({ key: f.key, value: checked ? 'true' : 'false' }),
+        });
+        if (resp.ok) {
+          serverSaved = true;
+          SERVER_CONFIG[f.key] = checked ? 'true' : 'false';
+        }
+      } catch (err) {
+        console.error('Failed to save server config', err);
+      }
+    }
+  }
+  localStorage.setItem(FEAT_KEY, JSON.stringify(out));
+  notify(serverSaved ? '✅ Saved! Temp status cleanup updated on server.' : '✅ Saved! (local only)', 'success');
+}
+
+async function fetchRoomOptions() {
+  try {
+    const resp = await fetch('/api/rooms', { credentials: 'same-origin' });
+    if (!resp.ok) return;
+    const rooms = await resp.json();
+    const select = document.getElementById('userRoomFilter');
+    select.innerHTML = '<option value="">All Rooms</option>' + rooms.map(room => {
+      const name = room.name || room.room_id;
+      return `<option value="${esc(room.room_id)}">${esc(name)}</option>`;
+    }).join('');
+  } catch (err) {
+    console.error('Failed to load rooms', err);
+  }
+}
+
+function renderUsers(users, roomId, banned) {
+  const tbody = document.getElementById('userTableBody');
+  if (!users.length) {
+    tbody.innerHTML = '<tr><td colspan="5" style="color:var(--muted);">No users found.</td></tr>';
+    return;
+  }
+  tbody.innerHTML = users.map(user => {
+    const displayName = esc(user.display_name) || esc(user.mxid);
+    const isBanned = roomId && banned.includes(user.mxid);
+    const action = roomId ?
+      `<button class="btn ${isBanned ? 'btn-danger' : 'btn-success'}" onclick="toggleBan('${jsEscape(user.mxid)}','${jsEscape(roomId)}', ${isBanned})">${isBanned ? 'Unban' : 'Ban'}</button>` :
+      '<span class="mono">Choose a room to manage</span>';
+    return `
+      <tr>
+        <td><div class="tag">${esc(user.mxid)}</div></td>
+        <td>${displayName}</td>
+        <td>${user.command_count ?? 0}</td>
+        <td>${user.message_count ?? 0}</td>
+        <td>${action}</td>
+      </tr>
+    `;
+  }).join('');
+}
+
+async function toggleBan(mxid, roomId, currentlyBanned) {
+  const url = currentlyBanned ? '/api/unban' : '/api/ban';
+  const payload = { mxid, room_id: roomId };
+  if (!currentlyBanned) payload.reason = 'Dashboard ban';
+  try {
+    const resp = await fetch(url, {
+      method: 'POST',
+      credentials: 'same-origin',
+      headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify(payload),
+    });
+    if (resp.ok) {
+      notify(`✅ ${currentlyBanned ? 'Unbanned' : 'Banned'} ${mxid}`, 'success');
+      await loadUsers();
+    } else {
+      const data = await resp.json().catch(() => ({}));
+      notify(data.error || 'Failed to update ban status', 'error');
+    }
+  } catch (err) {
+    console.error(err);
+    notify('Failed to update ban status', 'error');
+  }
+}
+
+async function loadUsers() {
+  const roomId = document.getElementById('userRoomFilter').value;
+  let url = '/api/users';
+  if (roomId) url += '?room_id=' + encodeURIComponent(roomId);
+  try {
+    const resp = await fetch(url, { credentials: 'same-origin' });
+    if (!resp.ok) throw new Error('Unable to fetch users');
+    const data = await resp.json();
+    renderUsers(data.users || [], roomId, data.banned || []);
+  } catch (err) {
+    console.error(err);
+    notify('Unable to load users', 'error');
+  }
+}
+
+async function fetchServerConfig() {
+  try {
+    const resp = await fetch('/api/config', { credentials: 'same-origin' });
+    if (!resp.ok) return {};
+    SERVER_CONFIG = await resp.json();
+    return SERVER_CONFIG;
+  } catch (err) {
+    console.error('Failed to load server config', err);
+    return {};
+  }
+}
+
+// ─── Utils ────────────────────────────────────────────────────────
+function esc(s) {
+  return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
+
+function jsEscape(s) {
+  return String(s||'').replace(/\\/g,'\\\\').replace(/'/g,"\\'").replace(/"/g,'\\"');
+}
+
+// ─── Init ─────────────────────────────────────────────────────────
+async function checkAuth() {
+  try {
+    const resp = await fetch('/api/auth-status', { credentials: 'same-origin' });
+    if (!resp.ok) throw new Error('Auth check failed');
+    const data = await resp.json();
+    if (data.authenticated) {
+      startDashboard();
+    } else {
+      document.getElementById('loginOverlay').classList.remove('hide');
+    }
+  } catch (err) {
+    document.getElementById('loginOverlay').classList.remove('hide');
+  }
+}
+
+async function loginSubmit() {
+  const pw = document.getElementById('loginPassword').value;
+  const errEl = document.getElementById('loginError');
+  errEl.textContent = '';
+  try {
+    const resp = await fetch('/api/login', {
+      method: 'POST',
+      credentials: 'same-origin',
+      headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify({ password: pw }),
+    });
+    let data = {};
+    try {
+      data = await resp.json();
+    } catch (e) {
+      // ignore invalid JSON
+    }
+    if (resp.ok && data.success) {
+      document.getElementById('loginOverlay').classList.add('hide');
+      startDashboard();
+    } else {
+      errEl.textContent = data.message || 'Incorrect password.';
+    }
+  } catch (err) {
+    errEl.textContent = 'Login failed. Try again.';
+  }
+}
+
+async function startDashboard() {
+  await fetchServerConfig();
+  renderConfig();
+  renderFeatures();
+  await fetchRoomOptions();
+  await loadUsers();
+  wsConnect();
+}
+
+checkAuth();
+
+// Ping keepalive
+setInterval(() => {
+  if (ws && ws.readyState === 1) ws.send(JSON.stringify({type:'ping'}));
+}, 25000);
+</script>
+</body>
+</html>

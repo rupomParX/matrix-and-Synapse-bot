@@ -1,0 +1,17 @@
+version: '3.9'
+
+services:
+  rosebot:
+    build: .
+    container_name: rosebot
+    env_file:
+      - .env
+    volumes:
+      - ./:/app
+      - ./store:/app/store
+      - ./downloads:/app/downloads
+      - ./data:/app/data
+    ports:
+      - "7842:7842"
+    restart: unless-stopped
+    command: python bot.py
